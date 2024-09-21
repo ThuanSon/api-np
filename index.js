@@ -3,6 +3,7 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require("axios");
 const askCohere = require("./cohere");
+const parse = require("./textNodeGenerator");
 
 const app = express();
 app.use(cors());
@@ -65,7 +66,7 @@ app.get("/:word", async (req, res) => {
       wordArr[index] = "'s";
     }
 
-    const queryType = `SELECT expandType FROM words WHERE word = "${element}"`;
+    const queryType = `SELECT expandType FROM words WHERE name = "${element}"`;
 
     db.query(queryType, (error, results) => {
       if (error) {
@@ -104,7 +105,7 @@ app.get("/:word", async (req, res) => {
   !arrResult[0] ? arrResult.shift() : arrResult;
   arrResult = [...arrResult, ...wordArr];
 
-  const sqlQuery = "SELECT * FROM words WHERE word = ?";
+  const sqlQuery = "SELECT * FROM words WHERE name = ?";
 
   try {
     const resArr = Array(arrResult.length); // Mảng tạm để giữ kết quả
@@ -145,7 +146,7 @@ app.get("/:word", async (req, res) => {
               }
             }
             console.log(kind);
-            const insertToDb = `INSERT INTO words (word, type, kind,position) VALUES ('${wordString}', '${wordType}','${kind}','${position}')`;
+            const insertToDb = `INSERT INTO words (name, type, kind,position) VALUES ('${wordString}', '${wordType}','${kind}','${position}')`;
             const insertResult = await db.promise().query(insertToDb);
             if (insertResult) {
               console.log("successful!");
@@ -155,7 +156,7 @@ app.get("/:word", async (req, res) => {
 
             resArr[index] = {
               id: null,
-              word: wordString,
+              name: wordString,
               type: wordType,
               expandType: null,
               kind: kind,
@@ -165,16 +166,16 @@ app.get("/:word", async (req, res) => {
             };
           }
         } else {
-          const possessiveS = results.find((item) => item.word === "'s");
+          const possessiveS = results.find((item) => item.name === "'s");
           if (possessiveS) {
-            possessiveS.word = wordTemp;
+            possessiveS.name = wordTemp;
           }
           resArr[index] = { ...results[0], source: "database" };
         }
       })
     );
 
-    res.json(resArr);
+    res.json(parse(resArr));
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");

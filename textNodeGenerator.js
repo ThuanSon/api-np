@@ -51,154 +51,159 @@ const DEG = {
     //còn nữa
 };
 const parse = (arr) => {
-    let str = "[NP";
-    let preDetStr = "";
-    let detStr = "";
-    let detFound = false;
-    let degFound = false;
-    let preDetFound = false;
-    let advFound = false;
-    // Function to handle DET and PRE-DET
-    const handleDetAndPreDet = (array) => {
-        // for (let i = 0; i < array.length; i++) {
-        let i = 0;
-        let item = array[i];
+    if (Array.isArray(arr)) {
+        let str = "[NP";
+        let preDetStr = "";
+        let detStr = "";
+        let detFound = false;
+        let degFound = false;
+        let preDetFound = false;
+        let advFound = false;
+        // Function to handle DET and PRE-DET
+        const handleDetAndPreDet = (array) => {
+            // for (let i = 0; i < array.length; i++) {
+            let i = 0;
+            let item = array[i];
 
-        // Check for PRE-DET
-        if (PREDET.words.includes(item.name)) {
-            preDetStr = `[PRE-DET ${item.name}] [NP`;
-            preDetFound = true;
-            item = array[i + 1];
-        }
+            // Check for PRE-DET
+            if (PREDET.words.includes(item.name)) {
+                preDetStr = `[PRE-DET ${item.name}] [NP`;
+                preDetFound = true;
+                item = array[i + 1];
+            }
 
-        // Check for DET
-        const detType = DET.find(det => det.words.includes(item.name));
-        if (detType || item.name.includes("'s")) {
-            // detStr = `[DET [${detType ? detType.type : item.type} ${item.name}]]`;
-            detStr = `[DET [${detType ? detType.type : item?.name[0].toUpperCase() === item?.name[0] ? 'PossPropN' : 'PossCompN'} ${item.name}]]`;
-            detFound = true;
+            // Check for DET
+            const detType = DET.find(det => det.words.includes(item.name));
+            if (detType || item.name?.includes("'s")) {
+                // detStr = `[DET [${detType ? detType.type : item.type} ${item.name}]]`;
+                detStr = `[DET [${detType ? detType.type : item?.name[0].toUpperCase() === item?.name[0] ? 'PossPropN' : 'PossCompN'} ${item.name}]]`;
+                detFound = true;
+            }
+            // }
         }
+        //][AP 
+        handleDetAndPreDet(arr);
+
+        // Add placeholders if needed
+        // if (!preDetFound) {
+        //     preDetStr = "[PRE-DET ø]";
         // }
-    }
-    //][AP 
-    handleDetAndPreDet(arr);
-
-    // Add placeholders if needed
-    // if (!preDetFound) {
-    //     preDetStr = "[PRE-DET ø]";
-    // }
-    if (!detFound) {
-        detStr = "[DET ø]";
-    }
-
-    str += preDetStr + detStr + " [N'";
-
-    // Handle the remaining parts of the noun phrase
-    const handleNounBar = (array) => {
-        function degRecognize(array) {
-            array.forEach((element) => {
-                if (DEG.type.includes(element.type)) {
-                    degFound = true;
-                    advFound = !DEG.words.includes(element.name);
-                    str += advFound ? `[AP [${DEG.type} ${element.name}]` : `[AP [${DEG.expend} ${element.name}]`; // Fixed string concatenation
-                }
-            });
+        if (!detFound) {
+            detStr = "[DET ø]";
         }
-        degRecognize(array);
 
+        str += preDetStr + detStr + " [N'";
 
-        const QA = (array) => {
-            array.forEach((element) => {
-                str += element?.type === "QA" ? `[QA^ ${element?.name}]` : "";
-            });
-        };
-        QA(array);
-        // str += degFound ? `]` : '';
-        // str += degFound ? !advFound ? `]` : '' : '';
-        if (degFound) {
-            str += `]`;
-            if (advFound) str = str.substring(0, str.length - 1);
-        }
-        let nounArr = [];
-        let countNoun = 0;
-        let adjArr = []
-        let countAdj = 0;
-        array.forEach(item => {
-            // Skip items already processed as DET or PRE-DET
-            if (PREDET.words.includes(item.name) || DET.some(det => det.words.includes(item.name))) {
-                return;
-            }
-
-            // Add other parts of the noun phrase
-            if (item.type === 'adjective' || item.type === 'PossCommN') {
-                // str += `[AP [A ${item.name}]]`;
-                countAdj++
-                adjArr.push(item)
-            }
-            if (item.type === 'noun') {
-                countNoun++;
-                nounArr.push(item);
-            }
-        });
-
-        if (countAdj) {
-            if (countAdj > 1) {
-                adjArr.forEach((item, index) => {
-                    str += `[AP [${item?.type} ${item?.name}]]`;
-                    str += index === 0 || index % 2 === 0 ? `[N'` : "";
-                })
-            } else {
-                str += degFound ? `[${adjArr[0]?.type} ${adjArr[0]?.name}]]` : `[AP [${adjArr[0]?.type} ${adjArr[0]?.name}]]`;
-            }
-        }
-        // str += `]`
-
-        // Handle multiple nouns
-        const handleMultiNoun = (nounArr, countNoun) => {
-            if (countNoun > 1) {
-                str += `[headComN `;
-                nounArr.forEach((part, index) => {
-                    let items = part?.name.includes('-') ? part?.name.split('-') : [part.name];
-                    if (Array.isArray(items) && items.length > 1) {
-
-                        // Handle hyphenated nouns
-                        str += index % 2 !== 0 ? `[headComN ` : `[ModN`;
-                        items.forEach((item, itemIndex) => {
-                            if (itemIndex === items.length - 1) {
-                                str += `[headN ${item}]`;
-                            } else {
-                                str += `[ModN ${item}]`;
-                            }
-                        });
-                        str += `]`; // Close headComN for hyphenated nouns
-                    } else {
-                        // Handle single part nouns
-                        if (index === nounArr.length - 1) {
-                            str += `[headN ${part.name}]`;
-                        } else {
-                            str += `[ModN ${part.name}]`;
-                        }
+        // Handle the remaining parts of the noun phrase
+        const handleNounBar = (array) => {
+            function degRecognize(array) {
+                array.forEach((element) => {
+                    if (DEG.type.includes(element.type)) {
+                        degFound = true;
+                        advFound = !DEG.words.includes(element.name);
+                        str += advFound ? `[AP [${DEG.type} ${element.name}]` : `[AP [${DEG.expend} ${element.name}]`; // Fixed string concatenation
                     }
                 });
-                str += `]`
-            } else if (countNoun === 1) {
-                // Handle single noun
-                str += `[headN ${nounArr[0].name}]`;
             }
-        };
+            degRecognize(array);
 
-        handleMultiNoun(nounArr, countNoun)
 
+            const QA = (array) => {
+                array.forEach((element) => {
+                    str += element?.type === "QA" ? `[QA^ ${element?.name}]` : "";
+                });
+            };
+            QA(array);
+            // str += degFound ? `]` : '';
+            // str += degFound ? !advFound ? `]` : '' : '';
+            if (degFound) {
+                str += `]`;
+                if (advFound) str = str.substring(0, str.length - 1);
+            }
+            let nounArr = [];
+            let countNoun = 0;
+            let adjArr = []
+            let countAdj = 0;
+            array.forEach(item => {
+                // Skip items already processed as DET or PRE-DET
+                if (PREDET.words.includes(item.name) || DET.some(det => det.words.includes(item.name))) {
+                    return;
+                }
+
+                // Add other parts of the noun phrase
+                if (item.type === 'adjective' || item.type === 'PossCommN') {
+                    // str += `[AP [A ${item.name}]]`;
+                    countAdj++
+                    adjArr.push(item)
+                }
+                if (item.type === 'noun') {
+                    countNoun++;
+                    nounArr.push(item);
+                }
+            });
+
+            if (countAdj) {
+                if (countAdj > 1) {
+                    adjArr.forEach((item, index) => {
+                        str += `[AP [${item?.type} ${item?.name}]]`;
+                        str += index === 0 || index % 2 === 0 ? `[N'` : "";
+                    })
+                } else {
+                    str += degFound ? `[${adjArr[0]?.type} ${adjArr[0]?.name}]]` : `[AP [${adjArr[0]?.type} ${adjArr[0]?.name}]]`;
+                }
+            }
+            // str += `]`
+
+            // Handle multiple nouns
+            const handleMultiNoun = (nounArr, countNoun) => {
+                if (countNoun > 1) {
+                    str += `[headComN `;
+                    nounArr.forEach((part, index) => {
+                        let items = part?.name.includes('-') ? part?.name.split('-') : [part.name];
+                        if (Array.isArray(items) && items.length > 1) {
+
+                            // Handle hyphenated nouns
+                            str += index % 2 !== 0 ? `[headComN ` : `[ModN`;
+                            items.forEach((item, itemIndex) => {
+                                if (itemIndex === items.length - 1) {
+                                    str += `[headN ${item}]`;
+                                } else {
+                                    str += `[ModN ${item}]`;
+                                }
+                            });
+                            str += `]`; // Close headComN for hyphenated nouns
+                        } else {
+                            // Handle single part nouns
+                            if (index === nounArr.length - 1) {
+                                str += `[headN ${part.name}]`;
+                            } else {
+                                str += `[ModN ${part.name}]`;
+                            }
+                        }
+                    });
+                    str += `]`
+                } else if (countNoun === 1) {
+                    // Handle single noun
+                    str += `[headN ${nounArr[0].name}]`;
+                }
+            };
+
+            handleMultiNoun(nounArr, countNoun)
+
+        }
+
+        handleNounBar(arr);
+        str += "]";
+
+        return str;
     }
 
-    handleNounBar(arr);
-    str += "]";
 
-    console.log(str);
-    console.log(advFound);
+    // console.log(str);
+    // console.log(advFound);
 
 }
-
+module.exports = parse;
 // Test cases
 const a = [{ name: 'some', type: 'quantifier' }, { name: 'mistakes', type: 'noun' }];
 const b = [{ name: 'what a', type: 'exclamatory' }, { name: 'view', type: 'noun' }];
@@ -225,7 +230,7 @@ const o = [{ name: "beautifully", type: 'adverb' }, { name: "cool", type: 'adjec
 // parse(h);
 // parse(i);
 // parse(j);
-parse(k);
+// parse(k);
 // parse(m);
 // parse(n);
 // parse(o);
