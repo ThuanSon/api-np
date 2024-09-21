@@ -10,7 +10,9 @@ const askCohere = async (wordString) => {
                 "color",
                 "origin",
                 "material",
-                "purpose"). Chỉ cần trả ra nó là loại tính từ nào, không cần nói thêm bất cứ gì nữa!`;
+                "purpose"). Chỉ cần trả ra đó là loại tính từ nào, từ bạn trả ra phải trùng khớp với 1 trong 8 loại tính từ tôi đưa ra
+                và không cần thêm thông tin nào nữa. (Không được chứ những ký tự " và toàn bộ là chữ thường). Nên nhớ KHÔNG CẦN THÊM BẤT
+                CỨ THÔNG TIN NÀO NGOÀI 1 TRONG 8 LOẠI TÍNH TỪ Ở TRÊN`;
 
   // Define the request payload
   const payload = {
