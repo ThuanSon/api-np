@@ -65,7 +65,7 @@ app.get("/:word", async (req, res) => {
       wordArr[index] = "'s";
     }
 
-    const queryType = `SELECT expandType FROM words WHERE word = "${element}"`;
+    const queryType = `SELECT expandType FROM words WHERE name = "${element}"`;
 
     db.query(queryType, (error, results) => {
       if (error) {
@@ -104,7 +104,7 @@ app.get("/:word", async (req, res) => {
   !arrResult[0] ? arrResult.shift() : arrResult;
   arrResult = [...arrResult, ...wordArr];
 
-  const sqlQuery = "SELECT * FROM words WHERE word = ?";
+  const sqlQuery = "SELECT * FROM words WHERE name = ?";
 
   try {
     const resArr = Array(arrResult.length); // Mảng tạm để giữ kết quả
@@ -155,7 +155,7 @@ app.get("/:word", async (req, res) => {
 
             resArr[index] = {
               id: null,
-              word: wordString,
+              name: wordString,
               type: wordType,
               expandType: null,
               kind: kind,
@@ -165,9 +165,9 @@ app.get("/:word", async (req, res) => {
             };
           }
         } else {
-          const possessiveS = results.find((item) => item.word === "'s");
+          const possessiveS = results.find((item) => item.name === "'s");
           if (possessiveS) {
-            possessiveS.word = wordTemp;
+            possessiveS.name = wordTemp;
           }
           resArr[index] = { ...results[0], source: "database" };
         }
