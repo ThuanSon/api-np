@@ -3,6 +3,7 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require("axios");
 const askCohere = require("./cohere");
+const parse = require("./textNodeGenerator");
 
 const app = express();
 app.use(cors());
@@ -145,7 +146,7 @@ app.get("/:word", async (req, res) => {
               }
             }
             console.log(kind);
-            const insertToDb = `INSERT INTO words (word, type, kind,position) VALUES ('${wordString}', '${wordType}','${kind}','${position}')`;
+            const insertToDb = `INSERT INTO words (name, type, kind,position) VALUES ('${wordString}', '${wordType}','${kind}','${position}')`;
             const insertResult = await db.promise().query(insertToDb);
             if (insertResult) {
               console.log("successful!");
@@ -174,7 +175,7 @@ app.get("/:word", async (req, res) => {
       })
     );
 
-    res.json(resArr);
+    res.json(parse(resArr));
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
