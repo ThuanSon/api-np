@@ -28,23 +28,24 @@ db.connect((err) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  // res.send("Hello World!");
 });
 
 // Handle favicon.ico requests
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.get("/:word", async (req, res) => {
-  let { word } = req.params ?? ""; // Extract 'word' parameter from request
+  let { word } = req.params ?? ""; // Lấy dữ liệu từ request
   // console.log("content", word);
   let wordArr = word.split(" ");
+  // console.log(word);
   // console.log(wordArr);
   //tach tu, cum tu
 
   let arr = [];
   let arrResult = [];
   let wordTemp;
-  let arr_QA = wordArr;
+  // let arr_QA = wordArr;
   wordArr.forEach((element, index) => {
     /**
      * Tach PRE-DET
@@ -60,10 +61,6 @@ app.get("/:word", async (req, res) => {
           wordArr.splice(index, 2);
         }
       }
-    }
-    if (element.includes("'s")) {
-      wordTemp = element;
-      wordArr[index] = "'s";
     }
 
     const queryType = `SELECT expandType FROM words WHERE name = "${element}"`;
@@ -83,13 +80,20 @@ app.get("/:word", async (req, res) => {
     });
 
     /**
+     * tach so huu cap
+     */
+    if (element.includes("'s")) {
+      wordTemp = element;
+      wordArr[index] = "'s";
+    }
+    /**
      * Tach QA
      */
 
     if (element === "of") {
       for (let i = index; i >= 0; i--) {
         arr.push(wordArr[i]);
-        arrResult.splice(i, 1);
+        wordArr.splice(i, 1);
       }
       arr.reverse();
     }
@@ -104,6 +108,7 @@ app.get("/:word", async (req, res) => {
   arrResult.unshift(getStringQA());
   !arrResult[0] ? arrResult.shift() : arrResult;
   arrResult = [...arrResult, ...wordArr];
+  // console.log(arrResult);
 
   const sqlQuery = "SELECT * FROM words WHERE name = ?";
 
@@ -122,8 +127,8 @@ app.get("/:word", async (req, res) => {
           const response = externalData?.data;
 
           if (response?.length > 0) {
-            const wordString = item.toLocaleLowerCase();
-            const wordType = response?.[0]?.fl;
+            let wordString = item.toLocaleLowerCase();
+            let wordType = response?.[0]?.fl;
             let position = 100;
             let kind = null;
             if (wordType === "adjective") {
@@ -145,14 +150,24 @@ app.get("/:word", async (req, res) => {
                 }
               }
             }
-            console.log(kind);
+            // console.log(kind);
+
+            /**
+             * plural
+             */
+            if (response[1]?.hwi?.hw) {
+              wordString = response[1]?.hwi?.hw;
+              wordType = response[2]?.fl;
+              console.log(wordString, wordType);
+            }
+
             const insertToDb = `INSERT INTO words (name, type, kind,position) VALUES ('${wordString}', '${wordType}','${kind}','${position}')`;
             const insertResult = await db.promise().query(insertToDb);
-            if (insertResult) {
-              console.log("successful!");
-            } else {
-              console.log("failed!");
-            }
+            // if (insertResult) {
+            //   console.log("successful!");
+            // } else {
+            //   console.log("failed!");
+            // }
 
             resArr[index] = {
               id: null,
