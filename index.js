@@ -189,6 +189,7 @@ app.get("/:word", async (req, res) => {
         }
       })
     );
+    // console.log(resArr);
 
     res.json(parse(resArr));
   } catch (err) {

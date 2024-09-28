@@ -1,5 +1,5 @@
 const PREDET = {
-    type: "PRE-DET",
+    type: "pre-DET",
     words: ["all", "half", "both", "double"],
 };
 const DET = [
@@ -28,7 +28,7 @@ const DET = [
     },
     {
         type: "PossA",
-        words: ["my", "your", "its", "her", "his", "their"],
+        words: ["my", "your", "its", "her", "his", "their", "our"],
     },
     {
         type: ['PossPropN', 'PossCommN'],
@@ -59,17 +59,28 @@ const parse = (arr) => {
         let degFound = false;
         let preDetFound = false;
         let advFound = false;
+        let i = 0;
         // Function to handle DET and PRE-DET
+        const handleRestrict = (array) => {
+            let item = array[i];
+            let isDEG = DEG.words.includes(item?.name)
+            let isRestric = array[i + 1].type === PREDET.type || DET.find((item) => { item.type === array[i + 1].type }) || array[i + 1].type === 'noun';
+            if (item?.type === 'adverb' && !isDEG && isRestric) {
+                str += `[Restrict ${item?.name}] [NP`
+                array.shift();
+            }
+        }
+        handleRestrict(arr);
         const handleDetAndPreDet = (array) => {
             // for (let i = 0; i < array.length; i++) {
-            let i = 0;
             let item = array[i];
-
             // Check for PRE-DET
             if (PREDET.words.includes(item.name)) {
                 preDetStr = `[PRE-DET ${item.name}] [NP`;
                 preDetFound = true;
                 item = array[i + 1];
+                // arr.shift();
+
             }
 
             // Check for DET
@@ -77,12 +88,22 @@ const parse = (arr) => {
             if (detType || item.name?.includes("'s")) {
                 // detStr = `[DET [${detType ? detType.type : item.type} ${item.name}]]`;
                 detStr = `[DET [${detType ? detType.type : item?.name[0].toUpperCase() === item?.name[0] ? 'PossPropN' : 'PossCompN'} ${item.name}]]`;
+                // arr.shift();
+
                 detFound = true;
             }
             // }
         }
         //][AP 
         handleDetAndPreDet(arr);
+        // i = preDetFound ? detFound ? 2 : 1 : 0;
+        i = preDetFound && detFound ? 2 : detFound ? 1 : 0
+
+        let newArr = [];
+        for (; i < arr.length; i++) {
+            newArr.push(arr[i])
+        }
+        console.log(newArr);
 
         // Add placeholders if needed
         // if (!preDetFound) {
@@ -105,7 +126,7 @@ const parse = (arr) => {
                     }
                 });
             }
-            degRecognize(array);
+            // degRecognize(array);
 
 
             const QA = (array) => {
@@ -126,13 +147,14 @@ const parse = (arr) => {
             let countAdj = 0;
             array.forEach(item => {
                 // Skip items already processed as DET or PRE-DET
-                if (PREDET.words.includes(item.name) || DET.some(det => det.words.includes(item.name))) {
+                if (PREDET?.words.includes(item.name) || DET.some(det => det.words.includes(item.name))) {
                     return;
                 }
 
                 // Add other parts of the noun phrase
-                if (item.type === 'adjective' || item.type === 'PossCommN') {
+                if (item.type === 'adjective' || item.type === 'PossCommN' || item?.type === 'adverb' || item?.type === 'possessive') {
                     // str += `[AP [A ${item.name}]]`;
+
                     countAdj++
                     adjArr.push(item)
                 }
@@ -145,8 +167,17 @@ const parse = (arr) => {
             if (countAdj) {
                 if (countAdj > 1) {
                     adjArr.forEach((item, index) => {
-                        str += `[AP [${item?.type} ${item?.name}]]`;
-                        str += index === 0 || index % 2 === 0 ? `[N'` : "";
+                        if (adjArr.length === index + 1) {
+                            if (str[str.length - 1] === `'`) {//nếu là phần tử cuối là dấu ' thì cắt bỏ 3 ký tự
+                                str = str.substring(0, str.length - 3)
+                            }
+                            str = str.substring(0, str.length - 1) // cắt bỏ một ký tự cuối là }
+                            str += `[${item?.type} ${item?.name}]]`
+                        } else {
+                            str += `[AP [${item?.type} ${item?.name}]]`;
+
+                        }
+                        str += index % 2 === 0 || (adjArr[index]?.type === 'adjective' && adjArr[index + 1]?.type === 'adjective') ? `[N'` : "";
                     })
                 } else {
                     str += degFound ? `[${adjArr[0]?.type} ${adjArr[0]?.name}]]` : `[AP [${adjArr[0]?.type} ${adjArr[0]?.name}]]`;
@@ -192,8 +223,8 @@ const parse = (arr) => {
 
         }
 
-        handleNounBar(arr);
-        str += "]";
+        handleNounBar(newArr);
+        str += "]]";
 
         return str;
     }
@@ -204,6 +235,7 @@ const parse = (arr) => {
 
 }
 module.exports = parse;
+
 // Test cases
 const a = [{ name: 'some', type: 'quantifier' }, { name: 'mistakes', type: 'noun' }];
 const b = [{ name: 'what a', type: 'exclamatory' }, { name: 'view', type: 'noun' }];
@@ -215,10 +247,22 @@ const g = [{ name: 'half', type: 'PRE-DET' }, { name: "student's", type: 'PossCo
 const h = [{ name: 'half', type: 'PRE-DET' }, { name: "Harry's", type: 'PossPropN' }, { name: 'new', type: 'adjective' }, { name: 'roommates', type: 'noun' }];
 const i = [{ name: "the", type: 'article' }, { name: 'child', type: 'noun' }, { name: 'safety-harness', type: 'noun' }];
 const j = [{ name: "the", type: 'article' }, { name: 'black', type: 'adjective' }, { name: 'child-poverty', type: 'noun' }, { name: 'action-group', type: 'noun' }];
+const z = [{ name: "the", type: 'article' }, { name: 'black', type: 'adjective' }, { name: 'child', type: 'noun' }, { name: 'poverty', type: 'noun' }, { name: 'action', type: 'noun' }, { name: 'group', type: 'noun' }];
 const k = [{ name: "some", type: 'quantifier' } /*, { name: 'extremely', type: 'adverb' }*/, { name: 'expensive', type: 'adjective' }, { name: 'house-roof', type: 'noun' }, { name: 'maintainance', type: 'noun' }];
 const m = [{ name: "the", type: 'article' }, { name: "summer's", type: 'PossCommN' }, { name: 'red', type: 'adjective' }, { name: 'roses', type: 'noun' }];
 const n = [{ name: "so", type: 'adverb' }, { name: "few", type: 'QA' }, { name: 'ideas', type: 'noun' }];
 const o = [{ name: "beautifully", type: 'adverb' }, { name: "cool", type: 'adjective' }, { name: 'weather', type: 'noun' }];
+const p = [
+    { name: 'those', type: 'demonstrative' },
+    { name: 'two', type: 'adjective' },
+    { name: 'very', type: 'adverb' },
+    { name: 'testy', type: 'adjective' },
+    { name: 'women', type: 'noun' }
+]
+
+
+
+
 
 // parse(a); // Example usage
 // parse(b);
@@ -234,4 +278,5 @@ const o = [{ name: "beautifully", type: 'adverb' }, { name: "cool", type: 'adjec
 // parse(m);
 // parse(n);
 // parse(o);
+console.log(parse(p));
 
