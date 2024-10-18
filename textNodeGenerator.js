@@ -32,7 +32,7 @@ const DET = [
     },
     {
         type: ["PossPropN", "PossCommN"],
-        words: ["'s"],
+        words: ["'"],
     },
     {
         type: "exclamatory^",
@@ -80,13 +80,8 @@ const parse = (arr) => {
         const handleRestrict = (array) => {
             let item = array[i];
             let isDEG = DEG.words.includes(item?.name);
-            let isRestric =
-                array[i + 1]?.type === PREDET.type ||
-                DET.find((item) => {
-                    item.type === array[i + 1]?.type;
-                }) ||
-                array[i + 1]?.type === "noun";
-            if (item?.type === "adverb" && !isDEG && isRestric) {
+            let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item.type === array[i + 1]?.type }) || array[i + 1]?.type === "noun";
+            if ((item?.type === "adverb" && !isDEG) || isRestric) {
                 str += `[Restrict ${item?.name}] [NP`;
                 array.shift();
             }
@@ -105,7 +100,7 @@ const parse = (arr) => {
 
             // Check for DET
             const detType = DET.find((det) => det.words.includes(item?.name));
-            if (detType || item?.name.includes("'s")) {
+            if (detType || item?.name.includes("'")) {
                 // detStr = `[DET [${detType ? detType.type : item.type} ${item.name}]]`;
                 detStr = `[DET [${detType
                     ? detType.type
@@ -256,9 +251,7 @@ const parse = (arr) => {
                 if (countNoun > 1) {
                     str += `[headComN `;
                     nounArr.forEach((part, index) => {
-                        let items = part?.name.includes("-")
-                            ? part?.name.split("-")
-                            : [part.name];
+                        let items = part?.name.includes("-") ? part?.name.split("-") : [part.name];
                         if (Array.isArray(items) && items.length > 1) {
                             // Handle hyphenated nouns
                             str += index % 2 !== 0 ? `[headComN ` : `[ModN`;
@@ -282,7 +275,7 @@ const parse = (arr) => {
                     str += `]`;
                 } else {
                     // Handle single noun
-                    str += `[headN ${nounArr[0].name}]`;
+                    str += `[headN ${nounArr[0]?.original}]`;
                 }
             };
 
