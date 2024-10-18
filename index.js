@@ -66,21 +66,21 @@ app.get("/:word", async (req, res) => {
       wordArr[index] = "'s";
     }
 
-    const queryType = `SELECT expandType FROM words WHERE name = "${element}"`;
+    // const queryType = `SELECT expandType FROM words WHERE name = "${element}"`;
 
-    db.query(queryType, (error, results) => {
-      if (error) {
-        console.error("Error executing query", error);
-        return;
-      }
-      if (results.length > 0 && results[0].expandType === "pre-DET") {
-        arrResult.push(element);
-      }
+    // db.query(queryType, (error, results) => {
+    //   if (error) {
+    //     console.error("Error executing query", error);
+    //     return;
+    //   }
+    //   if (results.length > 0 && results[0].expandType === "pre-DET") {
+    //     arrResult.push(element);
+    //   }
 
-      if (results.length > 0 && results[0].expandType === "DET") {
-        arrResult.push(element);
-      }
-    });
+    //   if (results.length > 0 && results[0].expandType === "DET") {
+    //     arrResult.push(element);
+    //   }
+    // });
 
     /**
      * Tach QA
@@ -104,6 +104,7 @@ app.get("/:word", async (req, res) => {
   arrResult.unshift(getStringQA());
   !arrResult[0] ? arrResult.shift() : arrResult;
   arrResult = [...arrResult, ...wordArr];
+  // console.log(arrResult);
 
   const sqlQuery = "SELECT * FROM words WHERE name = ?";
 
