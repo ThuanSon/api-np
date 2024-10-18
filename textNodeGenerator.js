@@ -80,7 +80,7 @@ const parse = (arr) => {
         const handleRestrict = (array) => {
             let item = array[i];
             let isDEG = DEG.words.includes(item?.name);
-            let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item.type === array[i + 1]?.type }) || array[i + 1]?.type === "noun";
+            let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item.type === array[i + 1]?.type }) || (item.type === "adverb" && array[i + 1]?.type === "noun");
             if ((item?.type === "adverb" && !isDEG) || isRestric) {
                 str += `[Restrict ${item?.name}] [NP`;
                 array.shift();
