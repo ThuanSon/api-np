@@ -100,16 +100,12 @@ const parse = (arr) => {
 
             // Check for DET
             const detType = DET.find((det) => det.words.includes(item?.name));
-            if (detType || item?.name.includes("'")) {
-                // detStr = `[DET [${detType ? detType.type : item.type} ${item.name}]]`;
-                detStr = `[DET [${detType
-                    ? detType.type
-                    : item?.name[0].toUpperCase() === item?.name[0]
-                        ? "PossPropN"
-                        : "PossCompN"
-                    } ${item.name}]]`;
-                // arr.shift();
+            const isPossA = DET[3].words.includes(item?.name);
 
+            // console.log(detType);
+            if (detType || item?.name.includes("'")) {
+                detStr = `[DET [${isPossA ? item?.type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossComN"} ${item.original}]]`;
+                // console.log(detStr);
                 detFound = true;
             }
             // }
@@ -143,8 +139,8 @@ const parse = (arr) => {
                         degFound = true;
                         advFound = !DEG.words.includes(element.name);
                         str += advFound
-                            ? `[AP [${DEG.type} ${element.name}]`
-                            : `[AP [${DEG.expend} ${element.name}]`; // Fixed string concatenation
+                            ? `[AP[${DEG.type} ${element.name}]`
+                            : `[AP[${DEG.expend} ${element.name}]`; // Fixed string concatenation
                     }
                 });
             }
@@ -152,10 +148,11 @@ const parse = (arr) => {
 
             const QA = (array) => {
                 array.forEach((element) => {
-                    str += element?.type === "QA" ? `[AP [QA^ ${element?.name}]]` : "";
+                    str += element?.type === "QA" ? `[AP[QA^ ${element?.name}]]` : "";
                 });
             };
             QA(array);
+            // console.log(array, '.....');
             // str += degFound ? `]` : '';
             // str += degFound ? !advFound ? `]` : '' : '';
             if (degFound) {
@@ -190,6 +187,9 @@ const parse = (arr) => {
                 } else {
                     processNoun(index);
                 }
+                if (array[index]?.type === "QA") {
+                    processNoun(index + 1);
+                }
             }
 
             function processNoun(index) {
@@ -198,7 +198,7 @@ const parse = (arr) => {
                 }
 
                 let item = array[index];
-
+                // console.log(item);
                 if (item.type === "noun") {
                     nounArr.push(item);
                     array.splice(index, 1);
@@ -216,7 +216,7 @@ const parse = (arr) => {
 
             // Bắt đầu xử lý từ phần tử đầu tiên
             processAdjective(0);
-            console.log(n);
+            // console.log(n);
             if (countAdj) {
                 if (countAdj > 1) {
                     adjArr.forEach((item, index) => {
@@ -247,11 +247,12 @@ const parse = (arr) => {
 
             // Handle multiple nouns
             const handleMultiNoun = (nounArr, countNoun) => {
-                console.log(countNoun);
+                // console.log(countNoun);
+
                 if (countNoun > 1) {
                     str += `[headComN `;
                     nounArr.forEach((part, index) => {
-                        let items = part?.name.includes("-") ? part?.name.split("-") : [part.name];
+                        let items = part?.original.includes("-") ? part?.original.split("-") : [part.original];
                         if (Array.isArray(items) && items.length > 1) {
                             // Handle hyphenated nouns
                             str += index % 2 !== 0 ? `[headComN ` : `[ModN`;
