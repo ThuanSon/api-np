@@ -152,10 +152,10 @@ app.get("/:word", async (req, res) => {
       };
       arrResult.push(obj);
       return true;
-    } else if (element.includes("'s")) {
+    } else if (element.includes("'")) {
       const obj = {
         id: index,
-        name: "'s",
+        name: "'",
         originalWord: element
       };
       arrResult.push(obj);
@@ -367,7 +367,8 @@ app.get("/:word", async (req, res) => {
         const [results] = await db.promise().query(sqlQuery, item?.name);
         if (results.length > 0) {
           let original = item?.originalWord;
-          const possessiveS = results.find((word) => word.name === "'s");
+          console.log(original);
+          const possessiveS = results.find((word) => word.name === "'");
           if (possessiveS) {
             // possessiveS.name = original; 
             possessiveS.name = item?.originalWord;
