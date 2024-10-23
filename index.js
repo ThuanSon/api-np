@@ -9,6 +9,9 @@ const pluralize = require('pluralize');
 const app = express();
 app.use(cors());
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const PORT = 3001;
 
 // MySQL connection configuration
@@ -386,6 +389,83 @@ app.get("/:word", async (req, res) => {
     res.status(500).send("Error executing query");
   }
 });
+
+//Lấy word theo status : 0,1
+app.get('/v1/words/:status', async (req, res) => {
+  try {
+    const status = req.params.status;
+    const sqlQuery = "SELECT * FROM words WHERE status = ? AND deleted = 0";
+
+    const [results] = await db.promise().query(sqlQuery, [status]);
+
+    const resArr = [];
+    results.forEach((row) => {
+      resArr.push({ ...row });
+    });
+
+    res.json(resArr);
+  } catch (err) {
+    console.error("Error executing query:", err.stack);
+    res.status(500).send("Error executing query");
+  }
+});
+
+//Thêm word mới (nếu cần)
+app.post('/v1/words', async (req, res) => {
+  try {
+    const { name, type, expandType, kind, position, status } = req.body;
+    const sqlQuery = "INSERT INTO words (name, type, expandType, kind, position, status) VALUES (?, ?, ?, ?, ?, ?)";
+
+    const [result] = await db.promise().query(sqlQuery, [name, type, expandType, kind, position, status]);
+
+    res.json({ message: 'Created successfully', insertedId: result.insertId });
+  } catch (err) {
+    console.error("Error inserting word:", err.stack);
+    res.status(500).send("Error inserting word");
+  }
+});
+
+
+//Approve word
+app.put('/v1/words/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+    const sqlQuery = "UPDATE words SET status = ? WHERE id = ?";
+
+    const [result] = await db.promise().query(sqlQuery, [status, id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: 'Updated successfully' });
+    } else {
+      res.status(404).send("Word not found");
+    }
+  } catch (err) {
+    console.error("Error updating word:", err.stack);
+    res.status(500).send("Error updating word");
+  }
+});
+
+//Xóa từ, bổ sung thêm field deleted
+app.delete('/v1/words/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sqlQuery = "UPDATE words SET deleted = 1 WHERE id = ?";
+
+    const [result] = await db.promise().query(sqlQuery, [id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: 'Deleted successfully' });
+    } else {
+      res.status(404).send("Word not found");
+    }
+  } catch (err) {
+    console.error("Error :", err.stack);
+    res.status(500).send("Error");
+  }
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -105,7 +105,6 @@ const parse = (arr) => {
             // console.log(detType);
             if (detType || item?.name.includes("'")) {
                 detStr = `[DET [${isPossA ? item?.type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossComN"} ${item.original}]]`;
-                // console.log(detStr);
                 detFound = true;
             }
             // }
