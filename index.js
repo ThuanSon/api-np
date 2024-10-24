@@ -9,6 +9,9 @@ const pluralize = require('pluralize');
 const app = express();
 app.use(cors());
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const PORT = 3001;
 
 // MySQL connection configuration
@@ -44,6 +47,8 @@ app.get("/:word", async (req, res) => {
   let wordTemp = null; //lưu word tạm thời
   let wordStringQA = ""; //output QA word group
   let originalWord = null;
+  let foundQA = false;
+  let arrComp = [];
   const PREDET = {
     type: "pre-DET",
     words: ["all", "half", "both", "double"],
@@ -90,6 +95,12 @@ app.get("/:word", async (req, res) => {
     },
   ];
 
+  // const handleQA = async (wordArr) => {
+  //   wordArr.forEach((element, index) => {
+
+
+  //   })
+  // }
   const handleRestrict = async (element, index) => {
     const query = `SELECT type FROM words WHERE name = ?`;
 
@@ -99,7 +110,8 @@ app.get("/:word", async (req, res) => {
       if (result.length > 0 && result[0].type === "adverb") {
         const obj = {
           id: 0,
-          name: element
+          name: element,
+          originalWord: element
         };
         arrResult.push(obj);
 
@@ -115,6 +127,7 @@ app.get("/:word", async (req, res) => {
           const obj = {
             id: 0,
             name: name,
+            originalWord: element
           };
           arrResult.push(obj); // Thêm vào arrResult
 
@@ -137,6 +150,7 @@ app.get("/:word", async (req, res) => {
       const obj = {
         id: index,
         name: element,
+        originalWord: element
       };
       arrResult.push(obj);
       return true;
@@ -149,6 +163,7 @@ app.get("/:word", async (req, res) => {
       const obj = {
         id: index,
         name: element,
+        originalWord: element
       };
       arrResult.push(obj);
       return true;
@@ -156,9 +171,20 @@ app.get("/:word", async (req, res) => {
       const obj = {
         id: index,
         name: "'",
-        originalWord: element
+        originalWord: element,
       };
       arrResult.push(obj);
+      return true;
+    } else if (element.toLocaleLowerCase() === "what") {
+      if (["a", "an"].includes(wordArr[index + 1])) {
+        const combined = element + " " + wordArr[index + 1];
+        const obj = {
+          id: index,
+          name: combined,
+          originalWord: combined
+        };
+        arrResult.push(obj);
+      }
       return true;
     }
     return false;
@@ -176,6 +202,7 @@ app.get("/:word", async (req, res) => {
         const obj = {
           id: index,
           name: element,
+          originalWord: element,
         };
         arrResult.push(obj);
         return true;
@@ -212,6 +239,7 @@ app.get("/:word", async (req, res) => {
           const obj = {
             id: index,
             name: element,
+            originalWord: element,
           };
           arrResult.push(obj);
 
@@ -232,7 +260,11 @@ app.get("/:word", async (req, res) => {
     const query = `SELECT type FROM words WHERE name = ?`;
 
     try {
-      convertElement = pluralize.singular(element);
+      if (element.includes("-")) {
+        arrComp = element.split("-");
+      }
+      convertElement = pluralize.singular(arrComp[0]);
+
       // Kiểm tra trong cơ sở dữ liệu
       const [result] = await db.promise().query(query, convertElement);
 
@@ -240,7 +272,7 @@ app.get("/:word", async (req, res) => {
         // Nếu từ đã có trong cơ sở dữ liệu và là danh từ
         const obj = {
           id: index,
-          name: convertElement,
+          name: arrComp[0],
           originalWord: element
         };
         arrResult.push(obj);
@@ -256,7 +288,7 @@ app.get("/:word", async (req, res) => {
           // Nếu API trả về kết quả là "noun"
           const obj = {
             id: index,
-            name: convertElement,
+            name: arrComp[0],
             originalWord: element
           };
           arrResult.push(obj);
@@ -273,92 +305,71 @@ app.get("/:word", async (req, res) => {
     }
   };
 
-
   for (let index = 0; index < wordArr.length; index++) {
     const element = wordArr[index];
 
-    const handledRestrict = await handleRestrict(element, index);
-    if (handledRestrict) {
-      continue;
-    }
+    if (element === "of") {
+      foundQA = true; // danh dấu QA
+      for (let i = index; i >= 0; i--) {
+        arrWordGroup.push(wordArr[i]);
+      }
+      arrWordGroup.reverse();
+      result = arrWordGroup.join(' ');
+      const obj = {
+        id: 0,
+        name: result,
+        originalWord: result
 
-    const handledPreDet = handlePreDet(element, index);
-    if (handledPreDet) {
+      }
+      arrResult.push(obj);
       continue;
     }
+    if (foundQA) {
+      const handledAdj = await handleAdj(element, index);
+      if (handledAdj) {
+        continue;
+      }
+      const handledNoun = await handleNoun(element, index);
+      if (handledNoun) {
+        continue;
+      }
+    }
+  }
+  if (!foundQA) {
+    for (let index = 0; index < wordArr.length; index++) {
+      const element = wordArr[index];
 
-    const handledDet = await handleDet(element, index);
-    if (handledDet) {
-      continue;
-    }
+      const handledRestrict = await handleRestrict(element, index);
+      if (handledRestrict) {
+        continue;
+      }
 
-    const handledAdj = await handleAdj(element, index);
-    if (handledAdj) {
-      continue;
-    }
-    const handledNoun = await handleNoun(element, index);
-    if (handledNoun) {
-      continue;
+      const handledPreDet = handlePreDet(element, index);
+      if (handledPreDet) {
+        continue;
+      }
+
+      const handledDet = await handleDet(element, index);
+      if (handledDet) {
+        element.toLocaleLowerCase() === "what" && index++;
+        continue;
+      }
+
+      const handledAdj = await handleAdj(element, index);
+      if (handledAdj) {
+        continue;
+      }
+
+      const handledNoun = await handleNoun(element, index);
+      if (handledNoun) {
+        continue;
+      }
     }
   }
   console.log(arrResult);
 
-  //kiểm tra có phải exclamatory
-  const handleExclamatory = (wordArr, element, index) => {
-    if (element.toLocaleLowerCase() === "what") {
-      if (index + 1 < wordArr.length) {
-        if (["a", "an"].includes(wordArr[index + 1])) {
-          const combined = element + " " + wordArr[index + 1];
-          const obj = {
-            id: index,
-            name: combined,
-          };
-          arrResult.push(obj);
-          wordArr.splice(index, 2);
-        }
-      }
-    }
-  };
-  /**
-   * tach QA word group
-   */
-  const handleQAWordGroup = (wordArr, element, index) => {
-    if (element === "of") {
-      for (let i = index; i >= 0; i--) {
-        arrWordGroup.push(wordArr[i]);
-        wordArr.splice(i, 1);
-      }
-      arrWordGroup.reverse();
-    }
-  };
-
-  const handleCompN = (wordArr, element, index) => {
-    if (element.includes("-")) {
-      let arrComp = element.split("-");
-      wordArr.splice(index, 1);
-      arrComp.forEach((element, i) => {
-        const obj = {
-          id: index + i,
-          name: element,
-        };
-        arrResult.push(obj);
-      });
-    }
-  };
-
-  const getStringQA = () => {
-    for (let i = 0; i < arrWordGroup.toString().length; i++) {
-      wordStringQA += arrWordGroup.toString()[i].replace(",", " ");
-    }
-    return wordStringQA;
-  };
-  arrResult.unshift(getStringQA());
-  !arrResult[0] ? arrResult.shift() : arrResult;
-
-  // arrResult = [...arrResult, ...wordArr];
-  const sqlQuery = "SELECT * FROM words WHERE name = ?";
-
   try {
+    const sqlQuery = "SELECT * FROM words WHERE name = ?";
     const resArr = []; // Mảng tạm để giữ kết quả
     // console.log(wordArr);
     // Sử dụng Promise.all để chờ các truy vấn và API call
@@ -367,24 +378,94 @@ app.get("/:word", async (req, res) => {
         const [results] = await db.promise().query(sqlQuery, item?.name);
         if (results.length > 0) {
           let original = item?.originalWord;
-          console.log(original);
-          const possessiveS = results.find((word) => word.name === "'");
-          if (possessiveS) {
-            // possessiveS.name = original; 
-            possessiveS.name = item?.originalWord;
-          }
           resArr[index] = { ...results[0], original, source: "database" };
         }
       })
     );
     // res.json(resArr);
-    // Trả kết quả về client
     res.json(parse(resArr));
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
   }
 });
+
+//Lấy word theo status : 0,1
+app.get('/v1/words/:status', async (req, res) => {
+  try {
+    const status = req.params.status;
+    const sqlQuery = "SELECT * FROM words WHERE status = ? AND deleted = 0";
+
+    const [results] = await db.promise().query(sqlQuery, [status]);
+
+    const resArr = [];
+    results.forEach((row) => {
+      resArr.push({ ...row });
+    });
+
+    res.json(resArr);
+  } catch (err) {
+    console.error("Error executing query:", err.stack);
+    res.status(500).send("Error executing query");
+  }
+});
+
+//Thêm word mới (nếu cần)
+app.post('/v1/words', async (req, res) => {
+  try {
+    const { name, type, expandType, kind, position, status } = req.body;
+    const sqlQuery = "INSERT INTO words (name, type, expandType, kind, position, status) VALUES (?, ?, ?, ?, ?, ?)";
+
+    const [result] = await db.promise().query(sqlQuery, [name, type, expandType, kind, position, status]);
+
+    res.json({ message: 'Created successfully', insertedId: result.insertId });
+  } catch (err) {
+    console.error("Error inserting word:", err.stack);
+    res.status(500).send("Error inserting word");
+  }
+});
+
+
+//Approve word
+app.put('/v1/words/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+    const sqlQuery = "UPDATE words SET status = ? WHERE id = ?";
+
+    const [result] = await db.promise().query(sqlQuery, [status, id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: 'Updated successfully' });
+    } else {
+      res.status(404).send("Word not found");
+    }
+  } catch (err) {
+    console.error("Error updating word:", err.stack);
+    res.status(500).send("Error updating word");
+  }
+});
+
+//Xóa từ, bổ sung thêm field deleted
+app.delete('/v1/words/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sqlQuery = "UPDATE words SET deleted = 1 WHERE id = ?";
+
+    const [result] = await db.promise().query(sqlQuery, [id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: 'Deleted successfully' });
+    } else {
+      res.status(404).send("Word not found");
+    }
+  } catch (err) {
+    console.error("Error :", err.stack);
+    res.status(500).send("Error");
+  }
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
