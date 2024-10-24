@@ -394,21 +394,44 @@ app.get("/:word", async (req, res) => {
 app.get('/v1/words/:status', async (req, res) => {
   try {
     const status = req.params.status;
-    const sqlQuery = "SELECT * FROM words WHERE status = ? AND deleted = 0";
+    const { name, type, kind, expandType, position, deleted } = req.query;
 
-    const [results] = await db.promise().query(sqlQuery, [status]);
+    let sqlQuery = "SELECT * FROM words WHERE status = ?";
+    const queryParams = [status];
 
-    const resArr = [];
-    results.forEach((row) => {
-      resArr.push({ ...row });
-    });
-
-    res.json(resArr);
+    if (name) {
+      sqlQuery += " AND name LIKE ?";
+      queryParams.push(`%${name}%`);
+    }
+    if (type) {
+      sqlQuery += " AND type = ?";
+      queryParams.push(type);
+    }
+    if (kind) {
+      sqlQuery += " AND kind = ?";
+      queryParams.push(kind);
+    }
+    if (expandType) {
+      sqlQuery += " AND expandType = ?";
+      queryParams.push(expandType);
+    }
+    if (position) {
+      sqlQuery += " AND position = ?";
+      queryParams.push(position);
+    }
+    if (typeof deleted !== 'undefined') {
+      sqlQuery += " AND deleted = ?";
+      queryParams.push(deleted);
+    }
+    const [results] = await db.promise().query(sqlQuery, queryParams);
+    res.json(results);
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
   }
 });
+
+
 
 //Thêm word mới (nếu cần)
 app.post('/v1/words', async (req, res) => {
@@ -427,13 +450,16 @@ app.post('/v1/words', async (req, res) => {
 
 
 //Approve word
-app.put('/v1/words/:id', async (req, res) => {
+app.put('/v1/words', async (req, res) => {
   try {
-    const id = req.params.id;
-    const { status } = req.body;
-    const sqlQuery = "UPDATE words SET status = ? WHERE id = ?";
+    const { id, name, type, expandType, kind, position, status, deleted } = req.body;
+    const sqlQuery = `
+      UPDATE words 
+      SET name = ?, type = ?, expandType = ?, kind = ?, position = ?, status = ?, deleted = ? 
+      WHERE id = ?
+    `;
 
-    const [result] = await db.promise().query(sqlQuery, [status, id]);
+    const [result] = await db.promise().query(sqlQuery, [name, type, expandType, kind, position, status, deleted, id]);
 
     if (result.affectedRows > 0) {
       res.json({ message: 'Updated successfully' });
@@ -445,6 +471,7 @@ app.put('/v1/words/:id', async (req, res) => {
     res.status(500).send("Error updating word");
   }
 });
+
 
 //Xóa từ, bổ sung thêm field deleted
 app.delete('/v1/words/:id', async (req, res) => {
