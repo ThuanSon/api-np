@@ -262,8 +262,10 @@ app.get("/:word", async (req, res) => {
     try {
       if (element.includes("-")) {
         arrComp = element.split("-");
+        convertElement = pluralize.singular(arrComp[0]);
+      } else {
+        convertElement = pluralize.singular(element);
       }
-      convertElement = pluralize.singular(arrComp[0]);
 
       // Kiểm tra trong cơ sở dữ liệu
       const [result] = await db.promise().query(query, convertElement);
@@ -272,7 +274,7 @@ app.get("/:word", async (req, res) => {
         // Nếu từ đã có trong cơ sở dữ liệu và là danh từ
         const obj = {
           id: index,
-          name: arrComp[0],
+          name: arrComp[0] ?? convertElement,
           originalWord: element
         };
         arrResult.push(obj);
@@ -370,24 +372,31 @@ app.get("/:word", async (req, res) => {
 
   try {
     const sqlQuery = "SELECT * FROM words WHERE name = ?";
-    const resArr = []; // Mảng tạm để giữ kết quả
-    // console.log(wordArr);
-    // Sử dụng Promise.all để chờ các truy vấn và API call
-    await Promise.all(
-      arrResult.map(async (item, index) => {
-        const [results] = await db.promise().query(sqlQuery, item?.name);
-        if (results.length > 0) {
-          let original = item?.originalWord;
-          resArr[index] = { ...results[0], original, source: "database" };
-        }
-      })
-    );
-    // res.json(resArr);
+
+    // Khởi tạo hàng đợi
+    const queue = [...arrResult]; // Sao chép mảng arrResult vào hàng đợi
+    const resArr = []; // Mảng để lưu kết quả
+
+    // Hàm xử lý hàng đợi
+    while (queue.length > 0) {
+      const item = queue.shift(); // Lấy phần tử đầu tiên ra khỏi hàng đợi
+
+      // Thực hiện truy vấn cơ sở dữ liệu với phần tử từ hàng đợi
+      const [results] = await db.promise().query(sqlQuery, item?.name);
+
+      if (results.length > 0) {
+        const original = item?.originalWord;
+        resArr.push({ ...results[0], original, source: "database" }); // Lưu kết quả vào mảng resArr
+      }
+    }
+
+    // Trả về kết quả
     res.json(parse(resArr));
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
   }
+
 });
 
 //Lấy word theo status : 0,1
