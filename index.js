@@ -105,6 +105,7 @@ app.get("/:word", async (req, res) => {
     const query = `SELECT type FROM words WHERE name = ?`;
 
     try {
+      console.log(element);
       const [result] = await db.promise().query(query, element);
 
       if (result.length > 0 && result[0].type === "adverb") {
@@ -121,12 +122,13 @@ app.get("/:word", async (req, res) => {
           `https://dictionaryapi.com/api/v3/references/learners/json/${element}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
 
+        console.log(response?.data?.[0]?.fl);
         if (response?.data?.[0]?.fl === "adverb") {
           // Nếu API trả về kết quả là "adverb"
           let name = wordArr[0].toLowerCase();
           const obj = {
-            id: 0,
-            name: name,
+            id: index,
+            name: element,
             originalWord: element
           };
           arrResult.push(obj); // Thêm vào arrResult
@@ -135,7 +137,7 @@ app.get("/:word", async (req, res) => {
           const insertQuery = `INSERT INTO words (name, type) VALUES (?, ?)`;
           await db
             .promise()
-            .query(insertQuery, [name, response?.data?.[0]?.fl]);
+            .query(insertQuery, [element, response?.data?.[0]?.fl]);
           return true;
         }
       }
