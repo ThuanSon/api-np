@@ -36,7 +36,7 @@ const DET = [
     },
     {
         type: "exclamatory^",
-        words: ["what a", "what an"],
+        words: ["what a", "what an", 'what'],
     },
     {
         type: "interrogative",
@@ -76,6 +76,8 @@ const parse = (arr) => {
         let preDetFound = false;
         let advFound = false;
         let i = 0;
+        let extraWords = []; // mảng mới chứa các phần từ nếu sau noun còn phần tử
+
         // Function to handle DET and PRE-DET
         const handleRestrict = (array) => {
             let item = array[i];
@@ -103,9 +105,23 @@ const parse = (arr) => {
             const isPossA = DET[3].words.includes(item?.name);
 
             // console.log(detType);
-            if (detType || item?.name.includes("'")) {
+            // if (DET[5].words.includes(item?.name)) {
+            //     detStr = `[DET [${item?.type } ${item?.name}]]`;
+            //     return;
+            // }
+            // if (DET[6].words.includes(item?.name)) {
+            //     detStr = `[DET [${item?.type } ${item?.name}]]`;
+            //     return;
+            // }
+            if (detType && item?.name.includes("'")) {
                 detStr = `[DET [${isPossA ? item?.type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossComN"} ${item.original}]]`;
                 detFound = true;
+                return;
+            }
+            if (detType) {
+                detStr = `[DET [${item?.type}  ${item.original}]]`;
+                detFound = true;
+                return;
             }
             // }
         };
@@ -162,7 +178,6 @@ const parse = (arr) => {
             let countNoun = 0;
             let adjArr = [];
             let countAdj = 0;
-            let extraWords = []; // mảng mới chứa các phần từ nếu sau noun còn phần tử
             let isAP = ["adjective", "PossCommN", "adverb", "possessive"];
 
             function processAdjective(index) {
@@ -284,6 +299,13 @@ const parse = (arr) => {
 
         handleNounBar(newArr);
         str += "]]";
+
+        if (extraWords.length !== 0 && extraWords[0]?.type === 'adverb') {
+            let preStr = `[NP`;
+            let postStr = `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]]`
+            str = preStr + str + postStr;
+            // str+= `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]`
+        }
 
         return str;
     }
