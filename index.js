@@ -105,6 +105,7 @@ app.get("/:word", async (req, res) => {
     const query = `SELECT type FROM words WHERE name = ?`;
 
     try {
+      console.log(element);
       const [result] = await db.promise().query(query, element);
 
       if (result.length > 0 && result[0].type === "adverb") {
@@ -121,12 +122,13 @@ app.get("/:word", async (req, res) => {
           `https://dictionaryapi.com/api/v3/references/learners/json/${element}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
 
+        console.log(response?.data?.[0]?.fl);
         if (response?.data?.[0]?.fl === "adverb") {
           // Nếu API trả về kết quả là "adverb"
           let name = wordArr[0].toLocaleLowerCase();
           const obj = {
-            id: 0,
-            name: name,
+            id: index,
+            name: element,
             originalWord: element
           };
           arrResult.push(obj); // Thêm vào arrResult
@@ -135,7 +137,7 @@ app.get("/:word", async (req, res) => {
           const insertQuery = `INSERT INTO words (name, type) VALUES (?, ?)`;
           await db
             .promise()
-            .query(insertQuery, [name, response?.data?.[0]?.fl]);
+            .query(insertQuery, [element, response?.data?.[0]?.fl]);
           return true;
         }
       }
@@ -262,8 +264,10 @@ app.get("/:word", async (req, res) => {
     try {
       if (element.includes("-")) {
         arrComp = element.split("-");
+        convertElement = pluralize.singular(arrComp[0]);
+      } else {
+        convertElement = pluralize.singular(element);
       }
-      convertElement = pluralize.singular(arrComp[0]);
 
       // Kiểm tra trong cơ sở dữ liệu
       const [result] = await db.promise().query(query, convertElement);
@@ -272,7 +276,7 @@ app.get("/:word", async (req, res) => {
         // Nếu từ đã có trong cơ sở dữ liệu và là danh từ
         const obj = {
           id: index,
-          name: arrComp[0],
+          name: arrComp[0] ?? convertElement,
           originalWord: element
         };
         arrResult.push(obj);
@@ -288,7 +292,7 @@ app.get("/:word", async (req, res) => {
           // Nếu API trả về kết quả là "noun"
           const obj = {
             id: index,
-            name: arrComp[0],
+            name: arrComp[0] ?? convertElement,
             originalWord: element
           };
           arrResult.push(obj);
@@ -394,21 +398,44 @@ app.get("/:word", async (req, res) => {
 app.get('/v1/words/:status', async (req, res) => {
   try {
     const status = req.params.status;
-    const sqlQuery = "SELECT * FROM words WHERE status = ? AND deleted = 0";
+    const { name, type, kind, expandType, position, deleted } = req.query;
 
-    const [results] = await db.promise().query(sqlQuery, [status]);
+    let sqlQuery = "SELECT * FROM words WHERE status = ?";
+    const queryParams = [status];
 
-    const resArr = [];
-    results.forEach((row) => {
-      resArr.push({ ...row });
-    });
-
-    res.json(resArr);
+    if (name) {
+      sqlQuery += " AND name LIKE ?";
+      queryParams.push(`%${name}%`);
+    }
+    if (type) {
+      sqlQuery += " AND type = ?";
+      queryParams.push(type);
+    }
+    if (kind) {
+      sqlQuery += " AND kind = ?";
+      queryParams.push(kind);
+    }
+    if (expandType) {
+      sqlQuery += " AND expandType = ?";
+      queryParams.push(expandType);
+    }
+    if (position) {
+      sqlQuery += " AND position = ?";
+      queryParams.push(position);
+    }
+    if (typeof deleted !== 'undefined') {
+      sqlQuery += " AND deleted = ?";
+      queryParams.push(deleted);
+    }
+    const [results] = await db.promise().query(sqlQuery, queryParams);
+    res.json(results);
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
   }
 });
+
+
 
 //Thêm word mới (nếu cần)
 app.post('/v1/words', async (req, res) => {
@@ -427,13 +454,16 @@ app.post('/v1/words', async (req, res) => {
 
 
 //Approve word
-app.put('/v1/words/:id', async (req, res) => {
+app.put('/v1/words', async (req, res) => {
   try {
-    const id = req.params.id;
-    const { status } = req.body;
-    const sqlQuery = "UPDATE words SET status = ? WHERE id = ?";
+    const { id, name, type, expandType, kind, position, status, deleted } = req.body;
+    const sqlQuery = `
+      UPDATE words 
+      SET name = ?, type = ?, expandType = ?, kind = ?, position = ?, status = ?, deleted = ? 
+      WHERE id = ?
+    `;
 
-    const [result] = await db.promise().query(sqlQuery, [status, id]);
+    const [result] = await db.promise().query(sqlQuery, [name, type, expandType, kind, position, status, deleted, id]);
 
     if (result.affectedRows > 0) {
       res.json({ message: 'Updated successfully' });
@@ -445,6 +475,7 @@ app.put('/v1/words/:id', async (req, res) => {
     res.status(500).send("Error updating word");
   }
 });
+
 
 //Xóa từ, bổ sung thêm field deleted
 app.delete('/v1/words/:id', async (req, res) => {
