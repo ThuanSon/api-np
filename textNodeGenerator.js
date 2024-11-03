@@ -300,7 +300,7 @@ const parse = (arr) => {
         handleNounBar(newArr);
         str += "]]";
 
-        if (extraWords.length !== 0 && extraWords[0]?.type === 'adverb') {
+        if (extraWords.length !== 0 && ['adverb','adjective'].includes(extraWords[0]?.type)) {
             let preStr = `[NP`;
             let postStr = `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]]`
             str = preStr + str + postStr;
