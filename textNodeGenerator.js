@@ -81,10 +81,11 @@ const parse = (arr) => {
         // Function to handle DET and PRE-DET
         const handleRestrict = (array) => {
             let item = array[i];
-            let isDEG = DEG.words.includes(item?.name);
-            let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item.type === array[i + 1]?.type }) || (item.type === "adverb" && array[i + 1]?.type === "noun");
+
+            let isDEG = DEG.words.includes(item?.original);
+            let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item?.type === array[i + 1]?.type }) || (item?.type === "adverb" && array[i + 1]?.type === "noun");
             if ((item?.type === "adverb" && !isDEG) || isRestric) {
-                str += `[Restrict ${item?.name}] [NP`;
+                str += `[Restrict ${item?.original}] [NP`;
                 array.shift();
             }
         };
@@ -93,8 +94,8 @@ const parse = (arr) => {
             // for (let i = 0; i < array.length; i++) {
             let item = array[i];
             // Check for PRE-DET
-            if (PREDET.words.includes(item.name)) {
-                preDetStr = `[PRE-DET ${item.name}] [NP`;
+            if (PREDET.words.includes(item?.name)) {
+                preDetStr = `[PRE-DET ${item?.name}] [NP`;
                 preDetFound = true;
                 item = array[i + 1];
                 // arr.shift();
@@ -187,12 +188,11 @@ const parse = (arr) => {
 
                 let item = array[index];
 
-                if (isAP.includes(item.type)) {
+                if (isAP.includes(item?.type)) {
                     countAdj++;
                     adjArr.push(item);
                     array.splice(index, 1);
                     index--; // trừ index thì mảng đã bị thay đổi khi cắt phần tử ở trên
-
                     if (!isAP.includes(array[index + 1]?.type)) {
                         processNoun(index + 1);
                     } else {
@@ -213,7 +213,8 @@ const parse = (arr) => {
 
                 let item = array[index];
                 // console.log(item);
-                if (item.type === "noun") {
+                if (item?.type === "noun") {
+                    countNoun++;
                     nounArr.push(item);
                     array.splice(index, 1);
                     index--;
@@ -230,7 +231,6 @@ const parse = (arr) => {
 
             // Bắt đầu xử lý từ phần tử đầu tiên
             processAdjective(0);
-            console.log(extraWords);
             if (countAdj) {
                 if (countAdj > 1) {
                     adjArr.forEach((item, index) => {
@@ -240,9 +240,9 @@ const parse = (arr) => {
                                 str = str.substring(0, str.length - 3);
                             }
                             str = str.substring(0, str.length - 1); // cắt bỏ một ký tự cuối là }
-                            str += `[${item?.type} ${item?.name}]]`;
+                            str += `[${item?.type} ${item?.original}]]`;
                         } else {
-                            str += `[AP [${item?.type} ${item?.name}]]`;
+                            str += `[AP [${item?.type} ${item?.original}]]`;
                         }
                         str +=
                             index % 2 === 0 ||
@@ -253,15 +253,14 @@ const parse = (arr) => {
                     });
                 } else {
                     str += degFound
-                        ? `[${adjArr[0]?.type} ${adjArr[0]?.name}]]`
-                        : `[AP [${adjArr[0]?.type} ${adjArr[0]?.name}]]`;
+                        ? `[${adjArr[0]?.type} ${adjArr[0]?.original}]]`
+                        : `[AP [${adjArr[0]?.type} ${adjArr[0]?.original}]]`;
                 }
             }
             // str += `]`
 
             // Handle multiple nouns
             const handleMultiNoun = (nounArr, countNoun) => {
-                // console.log(countNoun);
 
                 if (countNoun > 1) {
                     str += `[headComN `;
@@ -281,9 +280,9 @@ const parse = (arr) => {
                         } else {
                             // Handle single part nouns
                             if (index === nounArr.length - 1) {
-                                str += `[headN ${part.name}]`;
+                                str += `[headN ${part.original}]`;
                             } else {
-                                str += `[ModN ${part.name}]`;
+                                str += `[ModN ${part.original}]`;
                             }
                         }
                     });

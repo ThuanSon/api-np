@@ -5,6 +5,7 @@ const axios = require("axios");
 const askCohere = require("./cohere");
 const parse = require("./textNodeGenerator");
 const pluralize = require('pluralize');
+const textToNumber = require('text-to-number');
 
 const app = express();
 app.use(cors());
@@ -105,12 +106,11 @@ app.get("/:word", async (req, res) => {
     const query = `SELECT type FROM words WHERE name = ?`;
 
     try {
-      console.log(element);
       const [result] = await db.promise().query(query, element);
 
       if (result.length > 0 && result[0].type === "adverb") {
         const obj = {
-          id: 0,
+          id: index,
           name: element,
           originalWord: element
         };
@@ -122,7 +122,6 @@ app.get("/:word", async (req, res) => {
           `https://dictionaryapi.com/api/v3/references/learners/json/${element}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
 
-        console.log(response?.data?.[0]?.fl);
         if (response?.data?.[0]?.fl === "adverb") {
           // Nếu API trả về kết quả là "adverb"
           let name = wordArr[0].toLocaleLowerCase();
@@ -215,7 +214,12 @@ app.get("/:word", async (req, res) => {
           `https://dictionaryapi.com/api/v3/references/learners/json/${element}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
 
-        const wordType = response?.data?.[0]?.fl;
+        let wordType = response?.data?.[0]?.fl;
+        console.log(response?.data?.[1]?.fl);
+        let isNumber = textToNumber(element);
+        if ((isNumber && isNumber !== 0) || (element === "purple")) {
+          wordType = response?.data?.[1]?.fl;
+        }
 
         if (wordType === "adjective") {
           // Nếu API trả về kết quả là "adjective", gọi API Cohere để xác định loại (kind)
@@ -283,11 +287,18 @@ app.get("/:word", async (req, res) => {
         return true;
       } else {
         // Nếu từ chưa có trong cơ sở dữ liệu, gọi API từ điển
+        console.log(convertElement);
         const response = await axios.get(
           `https://dictionaryapi.com/api/v3/references/learners/json/${convertElement}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
+        let arrException = [
+          'rose'
+        ];
+        let wordType = response?.data?.[0]?.fl;
 
-        const wordType = response?.data?.[0]?.fl;
+        if (arrException.includes(convertElement)) {
+          wordType = response?.data?.[1]?.fl;
+        }
         if (wordType === "noun") {
           // Nếu API trả về kết quả là "noun"
           const obj = {
