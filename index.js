@@ -123,7 +123,7 @@ app.get("/:word", async (req, res) => {
 
         if (response?.data?.[0]?.fl === "adverb") {
           // Nếu API trả về kết quả là "adverb"
-          let name = wordArr[0].toLowerCase();
+          let name = wordArr[0].toLocaleLowerCase();
           const obj = {
             id: 0,
             name: name,

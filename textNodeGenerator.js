@@ -215,7 +215,7 @@ const parse = (arr) => {
 
             // Bắt đầu xử lý từ phần tử đầu tiên
             processAdjective(0);
-            // console.log(n);
+            console.log(extraWords);
             if (countAdj) {
                 if (countAdj > 1) {
                     adjArr.forEach((item, index) => {
