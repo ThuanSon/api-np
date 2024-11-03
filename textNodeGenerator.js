@@ -214,6 +214,7 @@ const parse = (arr) => {
                 let item = array[index];
                 // console.log(item);
                 if (item.type === "noun") {
+                    countNoun++;
                     nounArr.push(item);
                     array.splice(index, 1);
                     index--;
@@ -234,23 +235,24 @@ const parse = (arr) => {
             if (countAdj) {
                 if (countAdj > 1) {
                     adjArr.forEach((item, index) => {
-                        if (adjArr.length === index + 1) {
+                        isAdv = item?.type === 'adverb';
+                        if (index !== 0) {
                             if (str[str.length - 1] === `'`) {
                                 //nếu là phần tử cuối là dấu ' thì cắt bỏ 3 ký tự
                                 str = str.substring(0, str.length - 3);
                             }
                             str = str.substring(0, str.length - 1); // cắt bỏ một ký tự cuối là }
-                            str += `[${item?.type} ${item?.name}]]`;
+                            if (adjArr[index - 1]?.type === 'adverb') {
+                                str += `[${item?.type} ${item?.name}]]`;
+                            } else {
+                                str += `][N'[AP[${item?.type} ${item?.name}]]`;
+
+                            }
                         } else {
                             str += `[AP [${item?.type} ${item?.name}]]`;
                         }
-                        str +=
-                            index % 2 === 0 ||
-                                (adjArr[index]?.type === "adjective" &&
-                                    adjArr[index + 1]?.type === "adjective")
-                                ? `[N'`
-                                : "";
                     });
+                    // str+= ']'
                 } else {
                     str += degFound
                         ? `[${adjArr[0]?.type} ${adjArr[0]?.name}]]`
@@ -280,10 +282,19 @@ const parse = (arr) => {
                             str += `]`; // Close headComN for hyphenated nouns
                         } else {
                             // Handle single part nouns
-                            if (index === nounArr.length - 1) {
-                                str += `[headN ${part.name}]`;
+
+                            if (nounArr.length > 2) {
+                                if (index === nounArr.length - 1) {
+                                    str += `[headN ${part?.name}]`
+                                } else {
+                                    str += `[ModN ${part?.name}] ${index !== nounArr.length - 2 ? '[headComN' : ''}`
+                                }
                             } else {
-                                str += `[ModN ${part.name}]`;
+                                if (index === nounArr.length - 1) {
+                                    str += `[headN ${part.name}]`;
+                                } else {
+                                    str += `[ModN ${part.name}]`;
+                                }
                             }
                         }
                     });
@@ -300,7 +311,7 @@ const parse = (arr) => {
         handleNounBar(newArr);
         str += "]]";
 
-        if (extraWords.length !== 0 && ['adverb','adjective'].includes(extraWords[0]?.type)) {
+        if (extraWords.length !== 0 && ['adverb', 'adjective'].includes(extraWords[0]?.type)) {
             let preStr = `[NP`;
             let postStr = `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]]`
             str = preStr + str + postStr;
