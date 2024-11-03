@@ -411,7 +411,7 @@ app.get('/v1/words/:status', async (req, res) => {
     const status = req.params.status;
     const { name, type, kind, expandType, position, deleted } = req.query;
 
-    let sqlQuery = "SELECT * FROM words WHERE status = ?";
+    let sqlQuery = "SELECT * FROM words WHERE status = ? ";
     const queryParams = [status];
 
     if (name) {
