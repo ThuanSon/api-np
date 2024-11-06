@@ -1,13 +1,30 @@
+require('dotenv').config();
 const express = require("express");
-const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require("axios");
 const askCohere = require("./cohere");
 const parse = require("./textNodeGenerator");
 const pluralize = require('pluralize');
 const textToNumber = require('text-to-number');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const db = require('./database/db');
 
 const app = express();
+
+const verifyToken = (req, res, next) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) return res.status(403).json({ message: "Không có token, quyền truy cập bị từ chối" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+  }
+};
+
 app.use(cors());
 
 app.use(express.json());
@@ -15,31 +32,14 @@ app.use(express.urlencoded({ extended: true }));
 
 const PORT = 3001;
 
-// MySQL connection configuration
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root", // Replace with your MySQL username
-  password: "", // Replace with your MySQL password
-  database: "np",
-});
-
-// Connect to MySQL
-db.connect((err) => {
-  if (err) {
-    console.error("Error connecting to MySQL:", err.stack);
-    return;
-  }
-  console.log("Connected to MySQL database np");
-});
-
 app.get("/", (req, res) => {
-  // res.send("Hello World!");
+  res.send("Hello World!");
 });
 
 // Handle favicon.ico requests
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-app.get("/:word", async (req, res) => {
+app.get("/:word", verifyToken, async (req, res) => {
   let { word } = req.params ?? "";
   let wordArr = word.split(" ");
   let count = null;
@@ -411,7 +411,8 @@ app.get('/v1/words/:status', async (req, res) => {
     const status = req.params.status;
     const { name, type, kind, expandType, position, deleted } = req.query;
 
-    let sqlQuery = "SELECT * FROM words WHERE status = ? ";
+    let sqlQuery = "SELECT * FROM words WHERE status = ? AND (deleted IS NULL OR deleted = 0)";
+
     const queryParams = [status];
 
     if (name) {
@@ -435,7 +436,7 @@ app.get('/v1/words/:status', async (req, res) => {
       queryParams.push(position);
     }
     if (typeof deleted !== 'undefined') {
-      sqlQuery += " AND deleted = ?";
+      sqlQuery += " OR deleted = ?";
       queryParams.push(deleted);
     }
     const [results] = await db.promise().query(sqlQuery, queryParams);
@@ -507,6 +508,73 @@ app.delete('/v1/words/:id', async (req, res) => {
   }
 });
 
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username và password không được để trống" });
+  }
+
+  try {
+    const query = "SELECT * FROM user WHERE username = ?";
+    const [rows] = await db.promise().query(query, [username]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ message: "Thông tin đăng nhập không chính xác" });
+    }
+
+    const user = rows[0];
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Thông tin đăng nhập không chính xác" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({ message: "Đăng nhập thành công", token });
+  } catch (error) {
+    console.error("Lỗi khi đăng nhập:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username và password không được để trống" });
+  }
+
+  try {
+    const query = "SELECT * FROM user WHERE username = ?";
+    const [rows] = await db.promise().query(query, [username]);
+
+    if (rows.length > 0) {
+      return res.status(400).json({ message: "Username đã tồn tại" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const insertQuery = "INSERT INTO user (username, password) VALUES (?, ?)";
+    const [result] = await db.promise().query(insertQuery, [username, hashedPassword]);
+    //sau khi đăng ký thì cho vô thẳng luôn đỡ login lại
+    const token = jwt.sign(
+      { id: result.insertId, username: username },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({ message: "Đăng ký thành công", token });
+  } catch (error) {
+    console.error("Lỗi khi đăng ký:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
 
 
 app.listen(PORT, () => {

@@ -283,15 +283,15 @@ const parse = (arr) => {
 
                             if (nounArr.length > 2) {
                                 if (index === nounArr.length - 1) {
-                                    str += `[headN ${part?.name}]`
+                                    str += `[headN ${part?.original}]`
                                 } else {
-                                    str += `[ModN ${part?.name}] ${index !== nounArr.length - 2 ? '[headComN' : ''}`
+                                    str += `[ModN ${part?.original}] ${index !== nounArr.length - 2 ? '[headComN' : ''}`
                                 }
                             } else {
                                 if (index === nounArr.length - 1) {
-                                    str += `[headN ${part.name}]`;
+                                    str += `[headN ${part.original}]`;
                                 } else {
-                                    str += `[ModN ${part.name}]`;
+                                    str += `[ModN ${part.original}]`;
                                 }
                             }
                         }
