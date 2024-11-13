@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
 // Handle favicon.ico requests
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-app.get("/:word", async (req, res) => {
+app.get("/api/:word", async (req, res) => {
   let { word } = req.params ?? "";
   let wordArr = word.split(" ");
   let count = null;
@@ -386,7 +386,7 @@ app.get("/:word", async (req, res) => {
 });
 
 //Lấy word theo status : 0,1
-app.get('/v1/words/:status', async (req, res) => {
+app.get('/api/v1/words/:status', async (req, res) => {
   try {
     const status = req.params.status;
     const { name, type, kind, expandType, position, deleted } = req.query;
@@ -430,7 +430,7 @@ app.get('/v1/words/:status', async (req, res) => {
 
 
 //Thêm word mới (nếu cần)
-app.post('/v1/words', async (req, res) => {
+app.post('/api/v1/words', async (req, res) => {
   try {
     const { name, type, expandType, kind, position, status } = req.body;
     const sqlQuery = "INSERT INTO words (name, type, expandType, kind, position, status) VALUES (?, ?, ?, ?, ?, ?)";
@@ -446,7 +446,7 @@ app.post('/v1/words', async (req, res) => {
 
 
 //Approve word
-app.put('/v1/words', async (req, res) => {
+app.put('/api/v1/words', async (req, res) => {
   try {
     const { id, name, type, expandType, kind, position, status, deleted } = req.body;
     const sqlQuery = `
@@ -470,7 +470,7 @@ app.put('/v1/words', async (req, res) => {
 
 
 //Xóa từ, bổ sung thêm field deleted
-app.delete('/v1/words/:id', async (req, res) => {
+app.delete('/api/v1/words/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const sqlQuery = "UPDATE words SET deleted = 1 WHERE id = ?";
@@ -488,7 +488,7 @@ app.delete('/v1/words/:id', async (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -523,7 +523,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/register', async (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
