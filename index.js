@@ -12,19 +12,6 @@ const db = require('./database/db');
 
 const app = express();
 
-const verifyToken = (req, res, next) => {
-  const token = req.header("Authorization")?.replace("Bearer ", "");
-  if (!token) return res.status(403).json({ message: "Không có token, quyền truy cập bị từ chối" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
-  }
-};
-
 app.use(cors());
 
 app.use(express.json());
@@ -39,9 +26,10 @@ app.get("/", (req, res) => {
 // Handle favicon.ico requests
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-app.get("/api/:word", async (req, res) => {
+app.get("/:word", async (req, res) => {
   let { word } = req.params ?? "";
   let wordArr = word.split(" ");
+  // wordArr = wordArr.map(word => word.toLowerCase());
   let count = null;
   let arrWordGroup = []; //QA word group
   let arrResult = []; //output
@@ -74,8 +62,8 @@ app.get("/api/:word", async (req, res) => {
         "either",
         "neither",
         "nor",
-        "a few",
-        "a little",
+        "a few",// loi
+        "a little",// loi
       ],
     },
     {
@@ -160,6 +148,10 @@ app.get("/api/:word", async (req, res) => {
   };
 
   const handleDet = async (element, index) => {
+    if (["few", "little"].includes(wordArr[index + 1])) {
+      element = element + ' ' + wordArr[index + 1];
+      wordArr.splice(1, index + 1);
+    }
     if (DET.find((det) => det.words.includes(element))) {
       const obj = {
         id: index,
@@ -215,12 +207,31 @@ app.get("/api/:word", async (req, res) => {
         );
 
         let wordType = response?.data?.[0]?.fl;
-        console.log(response?.data?.[1]?.fl);
         let isNumber = textToNumber(element);
+        if (wordType === undefined) {
+          wordType = response?.data?.[1]?.fl;
+        }
         if ((isNumber && isNumber !== 0) || (element === "purple")) {
           wordType = response?.data?.[1]?.fl;
         }
+        if (wordType == "verb") {
+          if (response?.data?.[1]?.fl === "noun") {
+            return false;
+          }
+          wordType = "adjective";
+          const obj = {
+            id: index,
+            name: element,
+            originalWord: element,
+          };
+          arrResult.push(obj);
 
+          const insertQuery = `INSERT INTO words (name, type) VALUES (?, ?)`;
+          await db
+            .promise()
+            .query(insertQuery, [element, wordType]);
+          return true;
+        }
         if (wordType === "adjective") {
           const obj = {
             id: index,
@@ -250,7 +261,7 @@ app.get("/api/:word", async (req, res) => {
         arrComp = element.split("-");
         convertElement = pluralize.singular(arrComp[0]);
       } else {
-        convertElement = pluralize.singular(element);
+        ["goods"].includes(element) ? convertElement = element : convertElement = pluralize.singular(element);;
       }
 
       // Kiểm tra trong cơ sở dữ liệu
@@ -267,7 +278,6 @@ app.get("/api/:word", async (req, res) => {
         return true;
       } else {
         // Nếu từ chưa có trong cơ sở dữ liệu, gọi API từ điển
-        console.log(convertElement);
         const response = await axios.get(
           `https://dictionaryapi.com/api/v3/references/learners/json/${convertElement}?key=68e57a54-8b7f-4122-9b42-5d499eb6eff0`
         );
@@ -277,6 +287,9 @@ app.get("/api/:word", async (req, res) => {
         let wordType = response?.data?.[0]?.fl;
 
         if (arrException.includes(convertElement)) {
+          wordType = response?.data?.[1]?.fl;
+        }
+        if (response?.data?.[1]?.fl === "noun") {
           wordType = response?.data?.[1]?.fl;
         }
         if (wordType === "noun") {
@@ -386,7 +399,7 @@ app.get("/api/:word", async (req, res) => {
 });
 
 //Lấy word theo status : 0,1
-app.get('/api/v1/words/:status', async (req, res) => {
+app.get('/v1/words/:status', async (req, res) => {
   try {
     const status = req.params.status;
     const { name, type, kind, expandType, position, deleted } = req.query;
@@ -430,7 +443,7 @@ app.get('/api/v1/words/:status', async (req, res) => {
 
 
 //Thêm word mới (nếu cần)
-app.post('/api/v1/words', async (req, res) => {
+app.post('/v1/words', async (req, res) => {
   try {
     const { name, type, expandType, kind, position, status } = req.body;
     const sqlQuery = "INSERT INTO words (name, type, expandType, kind, position, status) VALUES (?, ?, ?, ?, ?, ?)";
@@ -446,7 +459,7 @@ app.post('/api/v1/words', async (req, res) => {
 
 
 //Approve word
-app.put('/api/v1/words', async (req, res) => {
+app.put('/v1/words', async (req, res) => {
   try {
     const { id, name, type, expandType, kind, position, status, deleted } = req.body;
     const sqlQuery = `
@@ -470,7 +483,7 @@ app.put('/api/v1/words', async (req, res) => {
 
 
 //Xóa từ, bổ sung thêm field deleted
-app.delete('/api/v1/words/:id', async (req, res) => {
+app.delete('/v1/words/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const sqlQuery = "UPDATE words SET deleted = 1 WHERE id = ?";
@@ -488,7 +501,7 @@ app.delete('/api/v1/words/:id', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -523,7 +536,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.post('/api/register', async (req, res) => {
+app.post('/register', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -555,6 +568,20 @@ app.post('/api/register', async (req, res) => {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
+
+
+const verifyToken = (req, res, next) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) return res.status(403).json({ message: "Không có token, quyền truy cập bị từ chối" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+  }
+};
 
 
 app.listen(PORT, () => {
