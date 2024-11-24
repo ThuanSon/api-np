@@ -120,7 +120,7 @@ const parse = (arr) => {
                 return;
             }
             if (detType) {
-                detStr = `[DET [${item?.type}  ${item.original}]]`;
+                detStr = `[DET [${isPossA ? DET[3].type : item?.type}  ${item.original}]]`;
                 detFound = true;
                 return;
             }
@@ -315,6 +315,13 @@ const parse = (arr) => {
             str = preStr + str + postStr;
             // str+= `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]`
         }
+
+        str = str.replace('article', 'ART');
+        str = str.replace('demonstrative', 'DEM')
+        str = str.replace('quantifier', 'Q')
+        str = str.replaceAll('adjective', 'A')
+        str = str.replaceAll('adverb', 'ADV')
+        str = str.replaceAll("[headComN", "[N'[headComN")
 
         return str;
     }
