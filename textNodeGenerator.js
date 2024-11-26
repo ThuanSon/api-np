@@ -83,8 +83,18 @@ const parse = (arr) => {
             let item = array[i];
 
             let isDEG = DEG.words.includes(item?.original);
+
+
             let isRestric = array[i + 1]?.type === PREDET.type || DET.find((item) => { item?.type === array[i + 1]?.type }) || (item?.type === "adverb" && array[i + 1]?.type === "noun");
-            if ((item?.type === "adverb" && !isDEG) || isRestric) {
+            console.log('isRest', isRestric);
+
+            // if ((item?.type === "adverb" && !isDEG) || isRestric) {
+            //     // if (isRestric) {
+            //     str += `[Restrict ${item?.original}] [NP`;
+            //     array.shift();
+            // }
+            let next = array[i + 1]
+            if (item?.type === 'adverb' && next?.type !== 'adjective') {
                 str += `[Restrict ${item?.original}] [NP`;
                 array.shift();
             }
@@ -95,7 +105,7 @@ const parse = (arr) => {
             let item = array[i];
             // Check for PRE-DET
             if (PREDET.words.includes(item?.name)) {
-                preDetStr = `[PRE-DET ${item?.name}] [NP`;
+                preDetStr = `[pre-DET ${item?.name}] [NP`;
                 preDetFound = true;
                 item = array[i + 1];
                 // arr.shift();
@@ -114,8 +124,11 @@ const parse = (arr) => {
             //     detStr = `[DET [${item?.type } ${item?.name}]]`;
             //     return;
             // }
+            console.log('isPossA', isPossA);
+            console.log('isPossA', item?.name);
+
             if (detType && item?.name.includes("'")) {
-                detStr = `[DET [${isPossA ? item?.type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossComN"} ${item.original}]]`;
+                detStr = `[DET [${isPossA ? DET[3].type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossCommN"} ${item.original}]]`;
                 detFound = true;
                 return;
             }
@@ -317,11 +330,18 @@ const parse = (arr) => {
         }
 
         str = str.replace('article', 'ART');
+        str = str.replace('exclamatory', 'Exclam.DET');
+        str = str.replace('Exclam.DET  what a', 'Exclam.DET^ what a');
+        str = str.replace('interrogative', 'Interrog.DET');
         str = str.replace('demonstrative', 'DEM')
         str = str.replace('quantifier', 'Q')
         str = str.replaceAll('adjective', 'A')
-        str = str.replaceAll('adverb', 'ADV')
-        str = str.replaceAll("[headComN", "[N'[headComN")
+        str = str.replaceAll('adverb', 'Adv')
+        // str = str.replaceAll("[headComN", "[N'[headComN")
+        if (str.includes('AP')) {
+            str = str.replaceAll("[headComN", "[N'[headComN")
+
+        }
 
         return str;
     }
