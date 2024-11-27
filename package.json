@@ -5,13 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google-cloud/language": "^6.5.0",
+    "@supabase/supabase-js": "^2.46.1",
     "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",
     "body-parse": "^0.1.0",
@@ -26,6 +27,7 @@
     "node-cache": "^5.1.2",
     "number-to-words": "^1.2.4",
     "numbers-in-words": "^1.0.0",
+    "pg": "^8.13.1",
     "pluralize": "^8.0.0",
     "redis": "^4.7.0",
     "text-to-number": "^0.0.0",
