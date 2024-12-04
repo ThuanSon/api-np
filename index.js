@@ -9,7 +9,7 @@ const textToNumber = require('text-to-number');
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const db = require('./database/db');
-
+const sendGrammarCheckRequest = require('./spellcehck');
 const app = express();
 
 app.use(cors());
@@ -28,6 +28,29 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.get("/:word", async (req, res) => {
   let { word } = req.params ?? "";
+  let checkedWord;
+  const payload = {
+    earlyStopping: true,
+    maxWordsPercentage: 0.15,
+    numBeams: 5,
+    sample: true,
+    string: word,
+    style: 'text',
+    temperature: 1,
+    tone: 'standard',
+    topK: 50,
+    topP: 1,
+    wsId: '8a7d151e-b2cc-4233-9d91-d1a01c942646'
+  };
+  let checkRes = await sendGrammarCheckRequest(payload) 
+  checkedWord = checkRes?.data.message.toLowerCase().slice(0, -1); // the boy
+  console.log(word); // the boy
+  console.log(checkedWord);
+  const checksame = checkedWord?.includes(word);
+  if (!checksame) {
+    word=checkedWord;
+  }
+
   let wordArr = word.split(" ");
   // wordArr = wordArr.map(word => word.toLowerCase());
   let count = null;
@@ -391,7 +414,11 @@ app.get("/:word", async (req, res) => {
       })
     );
     // res.json(resArr);
-    res.json(parse(resArr));
+    res.json({
+      fixedWord: checkedWord,
+      spellcheck: checksame,
+      message: parse(resArr),
+    });
   } catch (err) {
     console.error("Error executing query:", err.stack);
     res.status(500).send("Error executing query");
