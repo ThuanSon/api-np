@@ -29,26 +29,31 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/:word", async (req, res) => {
   let { word } = req.params ?? "";
   let checkedWord;
-  const payload = {
-    earlyStopping: true,
-    maxWordsPercentage: 0.15,
-    numBeams: 5,
-    sample: true,
-    string: word,
-    style: 'text',
-    temperature: 1,
-    tone: 'standard',
-    topK: 50,
-    topP: 1,
-    wsId: '8a7d151e-b2cc-4233-9d91-d1a01c942646'
-  };
-  let checkRes = await sendGrammarCheckRequest(payload) 
-  checkedWord = checkRes?.data.message.toLowerCase().slice(0, -1); // the boy
-  console.log(word); // the boy
-  console.log(checkedWord);
-  const checksame = checkedWord?.includes(word);
-  if (!checksame) {
-    word=checkedWord;
+  let checksame;
+  if (!word.includes('-')) {
+    const payload = {
+      earlyStopping: true,
+      maxWordsPercentage: 0.15,
+      numBeams: 5,
+      sample: true,
+      string: word,
+      style: 'text',
+      temperature: 1,
+      tone: 'standard',
+      topK: 50,
+      topP: 1,
+      wsId: process.env.ZERO_KEY
+      // 6938f57a-4958-43a5-801b-7552bec8a92d
+    };
+    let checkRes = await sendGrammarCheckRequest(payload)
+    checkedWord = checkRes?.data.message.toLowerCase().replace('.', '') === 'program operating in realtime, and no channel exists' ? 'wrong grammar' : checkRes?.data.message.toLowerCase().replace('.', ''); // the boy
+    console.log(word); // the boy
+    console.log(checkedWord);
+    checksame = checkedWord?.includes(word);
+    if (!checksame && checkedWord !== 'wrong grammar') {
+      // let arr = word.split(" ");
+      word = checkedWord.replace(',', '');
+    }
   }
 
   let wordArr = word.split(" ");
