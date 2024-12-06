@@ -46,11 +46,11 @@ app.get("/:word", async (req, res) => {
       // 6938f57a-4958-43a5-801b-7552bec8a92d
     };
     let checkRes = await sendGrammarCheckRequest(payload)
-    checkedWord = checkRes?.data.message.toLowerCase().replace('.', '') === 'program operating in realtime, and no channel exists' ? 'wrong grammar' : checkRes?.data.message.toLowerCase().replace('.', ''); // the boy
+    checkedWord = checkRes?.data.message.toLowerCase().replace('.', '') === 'program operating in realtime, and no channel exists' ? 'fail to check spell' : checkRes?.data.message.toLowerCase().replace('.', ''); // the boy
     console.log(word); // the boy
     console.log(checkedWord);
     checksame = checkedWord?.includes(word);
-    if (!checksame && checkedWord !== 'wrong grammar') {
+    if (!checksame && checkedWord !== 'fail to check spell') {
       // let arr = word.split(" ");
       word = checkedWord.replace(',', '');
     }
