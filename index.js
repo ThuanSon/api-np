@@ -92,6 +92,8 @@ app.get("/:word", async (req, res) => {
         "nor",
         "a few",// loi
         "a little",// loi
+        "another",
+        "other",
       ],
     },
     {
@@ -196,7 +198,7 @@ app.get("/:word", async (req, res) => {
       };
       arrResult.push(obj);
       return true;
-    } else if (element.toLocaleLowerCase() === "what") {
+    } else if (element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") {
       if (["a", "an"].includes(wordArr[index + 1])) {
         const combined = element + " " + wordArr[index + 1];
         const obj = {
@@ -387,7 +389,7 @@ app.get("/:word", async (req, res) => {
 
       const handledDet = await handleDet(element, index);
       if (handledDet) {
-        element.toLocaleLowerCase() === "what" && index++;
+        (element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") && index++;
         continue;
       }
 

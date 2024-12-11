@@ -36,7 +36,7 @@ const DET = [
     },
     {
         type: "exclamatory^",
-        words: ["what a", "what an", 'what'],
+        words: ["what a", "what an", 'what', "such", "such an", "such a"],
     },
     {
         type: "interrogative",
