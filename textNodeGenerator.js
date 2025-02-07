@@ -36,7 +36,7 @@ const DET = [
     },
     {
         type: "exclamatory^",
-        words: ["what a", "what an", 'what', "such", "such an", "such a"],
+        words: ["what a", "what an", 'what', "what the", "such", "such an", "such a"],
     },
     {
         type: "interrogative",
@@ -128,12 +128,12 @@ const parse = (arr) => {
             console.log('isPossA', item?.name);
 
             if (detType && item?.name.includes("'")) {
-                detStr = `[DET [${isPossA ? DET[3].type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossCommN"} ${item.original}]]`;
+                detStr = `[DET[${isPossA ? DET[3].type : item?.original[0].toUpperCase() === item?.original[0] ? "PossPropN" : "PossCommN"} ${item.original}]]`;
                 detFound = true;
                 return;
             }
             if (detType) {
-                detStr = `[DET [${isPossA ? DET[3].type : item?.type}  ${item.original}]]`;
+                detStr = `[DET[${isPossA ? DET[3].type : item?.type}  ${item.original}]]`;
                 detFound = true;
                 return;
             }
@@ -329,9 +329,12 @@ const parse = (arr) => {
             // str+= `[AP [${extraWords[0]?.type} ${extraWords[0]?.name}]]`
         }
 
-        str = str.replace('article', 'ART');
+        str = str.replace('[DET[article  the]]', '[DET[ART  the]]');
         str = str.replace('exclamatory', 'Exclam.DET');
         str = str.replace('Exclam.DET  what a', 'Exclam.DET^ what a');
+        str = str.replace('Exclam.DET  what an', 'Exclam.DET^ what an');
+        str = str.replace('Exclam.DET  such a', 'Exclam.DET^ such a');
+        str = str.replace('Exclam.DET  such an', 'Exclam.DET^ what an');
         str = str.replace('interrogative', 'Interrog.DET');
         str = str.replace('demonstrative', 'DEM')
         str = str.replace('quantifier', 'Q')

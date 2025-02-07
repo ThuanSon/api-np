@@ -106,7 +106,7 @@ app.get("/:word", async (req, res) => {
     },
     {
       type: "exclamatory^",
-      words: ["what a", "what an"],
+      words: ["what a", "what the", "what", "such", "what an", "such a", "such an"],
     },
     {
       type: "interrogative",
@@ -178,11 +178,31 @@ app.get("/:word", async (req, res) => {
   };
 
   const handleDet = async (element, index) => {
-    if (["few", "little"].includes(wordArr[index + 1])) {
+    if (element === 'a' && ["few", "little"].includes(wordArr[index + 1])) {
       element = element + ' ' + wordArr[index + 1];
       wordArr.splice(1, index + 1);
     }
+    if (element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") {
+      if (["a", "an", "the"].includes(wordArr[index + 1])) {
+        const combined = element + " " + wordArr[index + 1];
+        arrResult.push({
+          id: index,
+          name: combined,
+          originalWord: combined
+        });
+      } else {
+        arrResult.push({
+          id: index,
+          name: element,
+          originalWord: element
+        });
+      }
+      return true;
+
+    }
     if (DET.find((det) => det.words.includes(element))) {
+      console.log(element, '204');
+      
       const obj = {
         id: index,
         name: element,
@@ -191,23 +211,14 @@ app.get("/:word", async (req, res) => {
       arrResult.push(obj);
       return true;
     } else if (element.includes("'")) {
+      console.log(element,"212");
+      
       const obj = {
         id: index,
         name: "'",
         originalWord: element,
       };
       arrResult.push(obj);
-      return true;
-    } else if (element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") {
-      if (["a", "an"].includes(wordArr[index + 1])) {
-        const combined = element + " " + wordArr[index + 1];
-        const obj = {
-          id: index,
-          name: combined,
-          originalWord: combined
-        };
-        arrResult.push(obj);
-      }
       return true;
     }
     return false;
@@ -390,6 +401,8 @@ app.get("/:word", async (req, res) => {
       const handledDet = await handleDet(element, index);
       if (handledDet) {
         (element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") && index++;
+        ((element.toLocaleLowerCase() === "what" || element.toLocaleLowerCase() === "such") && (wordArr[index].toLocaleLowerCase() !== "a" && wordArr[index].toLocaleLowerCase() !== "an")) && index--;
+        console.log("400", element, wordArr[index]);
         continue;
       }
 
